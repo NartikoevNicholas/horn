@@ -1,7 +1,7 @@
 package horn
 
-func Run(app App, config Config) {
-
-	server := server{app: app, config: config}
-	server.startup()
+func Run(config Config) {
+	server := Server{config: config}
+	server.Init()
+	server.Startup()
 }

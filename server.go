@@ -7,45 +7,44 @@ import (
 	"strconv"
 )
 
-type Header string
-type Headers map[string]Header
-
-type server struct {
-	app      App
+type Server struct {
 	config   Config
 	listener net.Listener
+	workers  []Worker
 }
 
-func (s server) startup() {
+func (s *Server) Init() {
+	s.config.ApplyDefault()
 	s.setListener()
-
-	fmt.Println("Server is startup")
-
-	// for {
-	// 	conn, err := listener.Accept()
-	// 	if err != nil {
-
-	// 	}
-	// 	buffer := make([]byte, 1024)
-	// 	conn.Read(buffer)
-	// 	// request := parseRequest(buffer)
-	// 	// response := app.requestHandler(request)
-	// 	// conn.Write(getResponse(response))
-	// 	n, err := conn.Write([]byte("тест"))
-	// 	n += 1
-	// 	conn.Close()
-	// }
 }
 
-func (s *server) setListener() {
+func (s *Server) Startup() {
+	for id := 1; id <= s.config.WorkerCount; id++ {
+		worker := Worker{id: id, listener: s.listener}
+		s.workers = append(s.workers, worker)
+		go worker.requestHandler(s.config.ProtocolHandler)
+	}
+	fmt.Println("Server is started")
+	defer s.Shutdown()
+}
+
+func (s *Server) Shutdown() {
+	s.listener.Close()
+	fmt.Println("Server is stopped")
+}
+
+func (s *Server) setListener() {
 	var err error
-	s.listener, err = net.Listen(s.config.Transport, s.addr())
+	if s.listener != nil {
+		return
+	}
+
+	s.listener, err = net.Listen(s.config.Transport, s.getAddr())
 	if err != nil {
-		fmt.Println("Server is not")
 		log.Fatal(err)
 	}
 }
 
-func (s server) addr() string {
+func (s *Server) getAddr() string {
 	return s.config.Host + ":" + strconv.Itoa(s.config.Port)
 }
